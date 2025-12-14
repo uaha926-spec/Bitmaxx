@@ -1,4 +1,4 @@
-<!-- START OF FILE ai_studio_code (Optimized) -->
+<!-- START OF FILE ai_studio_code (Ultra Fast & Fixed) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -41,14 +41,15 @@
             background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 40%, #ffffff 100%);
             color: var(--text-main); 
             height: 100vh; 
-            height: 100dvh; 
+            height: 100dvh; /* Fix for mobile address bar jumps */
             overflow: hidden; 
             display: flex; 
             justify-content: center; 
         }
 
-        /* Prevent Swal from shifting layout */
-        body.swal2-shown { height: 100% !important; overflow-y: hidden !important; }
+        /* FIX: Prevent Layout Shift when Swal appears */
+        body.swal2-shown { padding-right: 0 !important; overflow: hidden !important; height: 100dvh !important; }
+        .swal2-container { z-index: 99999 !important; }
 
         .usdt-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 5px; margin-bottom: 3px; }
         .usdt-icon-lg { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; margin-bottom: 4px; }
@@ -60,11 +61,13 @@
             width: 100%; max-width: 480px; height: 100%; 
             background: transparent;
             position: relative; display: flex; flex-direction: column;
+            contain: layout; /* Performance Booster */
         }
 
         .page-content {
             flex: 1; overflow-y: auto; padding: 20px; 
             padding-top: 10px; padding-bottom: 110px; 
+            will-change: transform; /* Hint to browser for smoother scrolling */
         }
         .page-content::-webkit-scrollbar { width: 4px; }
         .page-content::-webkit-scrollbar-thumb { background: #bbdefb; border-radius: 4px; }
@@ -73,15 +76,17 @@
         .flex-between { display: flex; justify-content: space-between; align-items: center; }
 
         @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(15px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .card, .menu-item, .balance-card { animation: fadeInUp 0.4s ease-out forwards; }
+        /* Faster Animation Speed */
+        .card, .menu-item, .balance-card { animation: fadeInUp 0.3s ease-out forwards; }
 
         .btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
         .btn-primary { background: var(--primary); color: white; box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3); }
         .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
         .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
 
         .card { background: var(--bg-card); border-radius: var(--radius); padding: 18px; margin-bottom: 15px; border: none; box-shadow: var(--shadow-soft); }
 
@@ -136,7 +141,7 @@
         }
         .total-bal-label { font-size: 13px; color: var(--text-gray); letter-spacing: 0.5px; font-weight: 500;}
         .total-bal-amount { 
-            font-size: 24px; /* Reduced for better fit */
+            font-size: 24px; /* Optimized size */
             font-weight: 700; color: var(--balance-green); 
             margin: 5px 0 15px 0; display: flex; align-items: center; justify-content: flex-start;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -190,14 +195,16 @@
             width: 45px; height: 45px; margin-bottom: 8px; object-fit: contain;
         }
 
+        /* FIXED BOTTOM NAV */
         .bottom-nav {
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
+            position: fixed; /* Force fixed positioning */
+            bottom: 0; left: 0; width: 100%; height: 85px;
             background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
             display: flex; justify-content: space-around; align-items: center; 
             padding-bottom: 15px; 
-            z-index: 20000;
+            z-index: 2147483647; /* Maximum Z-Index to prevent hiding */
             box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
-            transform: translateZ(0); 
+            transform: translateZ(0); /* Hardware acceleration */
         }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #b0bec5; font-size: 10px; cursor: pointer; transition: 0.3s; }
         .nav-item i { font-size: 22px; margin-bottom: 2px; }
@@ -1367,20 +1374,42 @@
             update(); const interval = setInterval(update, 1000);
         }
 
-        // FAST CLAIM FUNCTION
+        // --- ULTRA FAST OPTIMISTIC CLAIM ---
         function claimProfit(key, dailyAmt, totalDays, currentDays) {
-            // Disable button immediately to prevent double clicks
+            // 1. Instant UI Feedback (0.1s)
             const btn = document.getElementById(`btn-claim-${key}`);
-            if(btn) { btn.disabled = true; btn.innerText = "Claiming..."; }
+            if(btn) { 
+                btn.disabled = true; 
+                btn.innerText = "Claimed!";
+                btn.style.background = "#ccc";
+            }
+            
+            // 2. Optimistic Balance Update
+            const newBal = (parseFloat(userData.balance) + parseFloat(dailyAmt));
+            document.getElementById('w-balance').innerText = newBal.toFixed(2);
+            document.getElementById('u-balance').innerText = newBal.toFixed(8);
+            
+            // 3. Use Toast Notification instead of blocking Alert (Smoother)
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 2000,
+                timerProgressBar: true
+            });
+            Toast.fire({
+                icon: 'success',
+                title: `+${dailyAmt} USDT Claimed`
+            });
 
+            // 4. Background Server Update
             const planRef = db.ref(`users/${currentUser.uid}/activePlans/${key}`);
             const newDays = parseInt(currentDays) + 1;
             let updates = { lastClaim: Date.now(), daysPassed: newDays };
             if(newDays >= parseInt(totalDays)) updates.status = 'completed';
             
             planRef.update(updates).then(() => {
-                db.ref(`users/${currentUser.uid}/balance`).set(parseFloat(userData.balance) + parseFloat(dailyAmt));
-                Swal.fire({ title: 'Collected!', icon: 'success', timer: 1500, showConfirmButton: false, heightAuto: false });
+                db.ref(`users/${currentUser.uid}/balance`).set(newBal);
             });
         }
 
@@ -1493,4 +1522,4 @@
 
     </script>
 </body>
-</html>
+    </html>
