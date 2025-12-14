@@ -1,0 +1,1387 @@
+<!-- START OF FILE ai_studio_code (Updated with Commission Section) -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bitmax | User Panel</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- SweetAlert2 for Popups -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Firebase SDKs (v8 for stability) -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        /* --- BITMAX THEME VARIABLES --- */
+        :root {
+            --primary: #2196F3; 
+            --primary-light: #e3f2fd; 
+            --balance-green: #00897b; 
+            --bg-card: #ffffff; 
+            --text-main: #333333;
+            --text-gray: #757575;
+            --success: #00c853;
+            --danger: #e53935;
+            --radius: 16px; 
+            --font-main: 'Inter', sans-serif;
+            --shadow-soft: 0 8px 25px rgba(0,0,0,0.06);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
+        
+        body { 
+            font-family: var(--font-main); 
+            background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 40%, #ffffff 100%);
+            color: var(--text-main); 
+            height: 100vh; 
+            height: 100dvh; 
+            overflow: hidden; 
+            display: flex; 
+            justify-content: center; 
+        }
+
+        /* Prevent Swal from shifting layout */
+        body.swal2-shown { height: 100% !important; overflow-y: hidden !important; }
+
+        .usdt-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 5px; margin-bottom: 3px; }
+        .usdt-icon-lg { width: 32px; height: 32px; vertical-align: middle; margin-right: 8px; margin-bottom: 4px; }
+        
+        .currency-wrap { display: flex; align-items: center; justify-content: center; }
+        .currency-wrap.left { justify-content: flex-start; }
+
+        #app-container {
+            width: 100%; max-width: 480px; height: 100%; 
+            background: transparent;
+            position: relative; display: flex; flex-direction: column;
+        }
+
+        .page-content {
+            flex: 1; overflow-y: auto; padding: 20px; 
+            padding-top: 10px; padding-bottom: 110px; 
+        }
+        .page-content::-webkit-scrollbar { width: 4px; }
+        .page-content::-webkit-scrollbar-thumb { background: #bbdefb; border-radius: 4px; }
+
+        .hidden { display: none !important; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card, .menu-item, .balance-card { animation: fadeInUp 0.4s ease-out forwards; }
+
+        .btn { width: 100%; padding: 14px; border-radius: var(--radius); border: none; font-weight: 600; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .btn-primary { background: var(--primary); color: white; box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3); }
+        .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+
+        .card { background: var(--bg-card); border-radius: var(--radius); padding: 18px; margin-bottom: 15px; border: none; box-shadow: var(--shadow-soft); }
+
+        .header {
+            padding: 15px 20px; background: rgba(255,255,255,0.8); backdrop-filter: blur(10px);
+            display: flex; justify-content: space-between; align-items: center; z-index: 10;
+            height: 70px; flex-shrink: 0;
+        }
+        .user-info h3 { font-size: 16px; margin-bottom: 2px; color: black; font-weight: 700; }
+        .user-info p { font-size: 12px; color: var(--text-gray); }
+        
+        .header-back { display: flex; align-items: center; gap: 10px; cursor: pointer; color: var(--text-main); }
+        .header-back i { font-size: 18px; color: var(--primary); }
+        .header-back span { font-weight: 600; font-size: 16px; }
+
+        .header-icons { display: flex; align-items: center; gap: 15px; }
+        .header-icons i { font-size: 20px; color: var(--primary); cursor: pointer; transition: 0.2s; }
+
+        .auth-screen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%; padding: 30px; text-align: center; 
+            background: linear-gradient(180deg, #e3f2fd 0%, #ffffff 100%);
+        }
+        .auth-input {
+            width: 100%; background: #ffffff; border: none; padding: 15px;
+            border-radius: var(--radius); color: #333; margin-bottom: 15px; font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+        }
+        .auth-input:focus { box-shadow: 0 0 0 2px var(--primary); }
+        
+        input[type="file"]::file-selector-button {
+            border: none; background: var(--primary); color: white;
+            padding: 8px 12px; border-radius: 8px; margin-right: 10px; cursor: pointer;
+        }
+        
+        .password-wrapper { position: relative; width: 100%; margin-bottom: 15px; }
+        .password-wrapper input { margin-bottom: 0; }
+        .toggle-password {
+            position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: #757575; font-size: 16px;
+        }
+
+        .logo-box {
+            width: 80px; height: 80px; background: var(--primary); border-radius: 20px; 
+            display: flex; align-items: center; justify-content: center; 
+            margin: 0 auto 20px; box-shadow: 0 10px 20px rgba(33, 150, 243, 0.3);
+        }
+
+        .balance-card {
+            background: white; padding: 25px; border-radius: 20px; position: relative; overflow: hidden;
+            margin-top: 10px; box-shadow: var(--shadow-soft); text-align: left;
+        }
+        .total-bal-label { font-size: 13px; color: var(--text-gray); letter-spacing: 0.5px; font-weight: 500;}
+        .total-bal-amount { 
+            font-size: 32px; font-weight: 700; color: var(--balance-green); 
+            margin: 5px 0 15px 0; display: flex; align-items: center; justify-content: flex-start;
+        }
+        
+        .action-row { display: flex; gap: 15px; margin-top: 10px; }
+        .action-btn { 
+            flex: 1; background: #f5f7fa; padding: 12px; border-radius: 12px; text-align: center; 
+            font-size: 13px; color: #555; cursor: pointer; border: none;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; 
+        }
+        .action-btn:active { background: #e0e0e0; }
+
+        .menu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; margin-top: 15px; }
+        .menu-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+        .menu-icon {
+            width: 55px; height: 55px; background: white; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center; 
+            color: var(--primary); font-size: 22px; border: none; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.2s;
+        }
+        .menu-item:active .menu-icon { transform: scale(0.95); background: var(--primary); color: white; }
+        .menu-label { font-size: 11px; color: var(--text-gray); font-weight: 500; }
+
+        .plan-card { position: relative; overflow: hidden; background: white; border: none; }
+        .plan-badge {
+            position: absolute; top: 0; right: 0; background: var(--primary); color: white;
+            padding: 5px 12px; font-size: 10px; border-bottom-left-radius: 10px; font-weight: 600;
+        }
+        .plan-details { display: flex; justify-content: space-between; margin: 15px 0; border-top: 1px solid #f5f5f5; padding-top: 15px; }
+        .detail-box { text-align: center; width: 33%; }
+        .detail-title { font-size: 10px; color: var(--text-gray); text-transform: uppercase; }
+        .detail-val { font-size: 14px; font-weight: 700; color: var(--primary); margin-top: 4px; display: flex; align-items: center; justify-content: center;}
+
+        .active-plan-card { border-left: 4px solid var(--balance-green); background: white; border-radius: 12px; }
+        .timer-display {
+            background: #e0f2f1; color: var(--balance-green); padding: 10px;
+            border-radius: 8px; text-align: center; font-family: monospace; font-size: 15px; font-weight: bold; margin-top: 10px;
+        }
+        .progress-bar { width: 100%; height: 6px; background: #f0f0f0; border-radius: 3px; margin-top: 10px; overflow: hidden; }
+        .progress-fill { height: 100%; background: var(--balance-green); width: 0%; transition: width 0.5s; }
+
+        .method-select { display: flex; gap: 15px; margin-bottom: 20px; }
+        .method-opt {
+            flex: 1; padding: 15px 10px; background: white; border-radius: 16px;
+            text-align: center; border: 2px solid transparent; cursor: pointer; color: var(--text-gray);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.3s;
+        }
+        .method-opt.active { border-color: var(--primary); background: #f0f8ff; transform: translateY(-3px); }
+        .gateway-img {
+            width: 45px; height: 45px; margin-bottom: 8px; object-fit: contain;
+        }
+
+        .bottom-nav {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 85px;
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
+            display: flex; justify-content: space-around; align-items: center; 
+            padding-bottom: 15px; 
+            z-index: 20000; /* Fixed: High z-index to stay visible over popups */
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
+            transform: translateZ(0); /* Fixed: GPU Acceleration to prevent flicker */
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #b0bec5; font-size: 10px; cursor: pointer; transition: 0.3s; }
+        .nav-item i { font-size: 22px; margin-bottom: 2px; }
+        .nav-item.active { color: var(--primary); }
+        .nav-item.active i { transform: translateY(-3px); color: var(--primary); }
+
+        #loader {
+            position: absolute; inset: 0; background: white; z-index: 99999;
+            display: flex; justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner {
+            width: 40px; height: 40px; border: 4px solid #e3f2fd; border-top: 4px solid var(--primary);
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .team-list-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; padding: 12px; border-bottom: 1px solid #f5f5f5;
+        }
+        .team-list-item:last-child { border-bottom: none; }
+        .team-user-icon {
+            width: 35px; height: 35px; background: #e3f2fd; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; color: var(--primary); margin-right: 10px;
+        }
+        .team-info h5 { font-size: 14px; margin-bottom: 2px; }
+        .team-info p { font-size: 11px; color: #888; }
+        .team-amt { font-weight: bold; font-size: 13px; color: var(--balance-green); display: flex; align-items: center; }
+        
+        .gift-target-box { 
+            background: #f8f9fa; padding: 8px; border-radius: 8px; font-size: 11px; margin-top: 5px; border: none; color: var(--text-gray);
+        }
+
+        /* POPUP */
+        .popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(3px);
+            z-index: 9998; display: flex; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; transition: 0.3s ease;
+        }
+        .popup-overlay.show { opacity: 1; pointer-events: all; }
+        .popup-card {
+            width: 90%; max-width: 350px; background: white; border-radius: 20px;
+            padding: 20px; position: relative; box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center; transform: scale(0.9); transition: 0.3s;
+        }
+        .popup-overlay.show .popup-card { transform: scale(1); }
+        .popup-header { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--primary); margin-bottom: 15px; }
+        .popup-logo-icon { width: 30px; height: 30px; background: var(--primary); border-radius: 8px; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+        .popup-close-btn { position: absolute; top: 15px; right: 15px; font-size: 20px; color: #999; cursor: pointer; }
+        .popup-title { font-size: 20px; font-weight: 800; margin-bottom: 5px; color: #333; text-align: left; }
+        .popup-subtitle { font-size: 13px; color: #666; margin-bottom: 15px; text-align: left; }
+        .popup-scroll-area { flex: 1; overflow-y: auto; text-align: left; margin-bottom: 15px; max-height: 300px; padding-right: 5px; }
+        .popup-item { background: #f5f7fa; padding: 10px; border-radius: 8px; margin-bottom: 8px; display: flex; gap: 10px; align-items: flex-start; }
+        .popup-item i { color: var(--primary); font-size: 14px; margin-top: 3px; }
+        .popup-item p { font-size: 12px; color: #444; line-height: 1.4; margin: 0; }
+        .popup-go-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 50px; width: 100%; font-weight: 700; cursor: pointer; }
+
+        .support-icon-row { display: flex; justify-content: center; gap: 20px; margin: 20px 0; }
+        .support-icon { width: 60px; height: 60px; border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; transition: 0.2s; cursor: pointer; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+
+        /* Commission specific */
+        .comm-item {
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .comm-item:first-child { border-top-left-radius: 16px; border-top-right-radius: 16px; }
+        .comm-item:last-child { border-bottom-left-radius: 16px; border-bottom-right-radius: 16px; border-bottom: none; }
+        .comm-icon {
+            width: 40px; height: 40px; background: #e8f5e9; color: var(--balance-green);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 18px; margin-right: 12px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- SYSTEM LOADER -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <h4 style="letter-spacing: 1px; color:var(--primary);">Bitmax</h4>
+    </div>
+
+    <!-- NOTIFICATION POPUP -->
+    <div id="custom-popup" class="popup-overlay">
+        <div class="popup-card">
+            <span class="popup-close-btn" onclick="closePopup('custom-popup')">&times;</span>
+            <div class="popup-header">
+                <div class="popup-logo-icon"><i class="fas fa-layer-group"></i></div>
+                <span>Bitmax</span>
+            </div>
+            <h3 class="popup-title" id="pop-title">Important Notice</h3>
+            <p class="popup-subtitle" id="pop-subtitle">Platform Updates</p>
+            <div class="popup-scroll-area" id="pop-rules-list">
+                <div class="popup-item">
+                    <i class="fas fa-shield-alt"></i>
+                    <p>Welcome to Bitmax. Ensure account security.</p>
+                </div>
+            </div>
+            <button class="popup-go-btn" onclick="closePopup('custom-popup')">Acknowledge</button>
+        </div>
+    </div>
+
+    <!-- SUPPORT POPUP -->
+    <div id="support-popup" class="popup-overlay">
+        <div class="popup-card">
+            <span class="popup-close-btn" onclick="closePopup('support-popup')">&times;</span>
+            <div class="popup-header" style="justify-content:center;">
+                <span>Help Center</span>
+            </div>
+            <p style="color:#666; font-size:13px; margin-bottom:10px;">Select a channel to contact support</p>
+            <div class="support-icon-row">
+                <div class="support-icon" style="background: #25D366; color: white;" onclick="openSupportLink('wa')">
+                    <i class="fab fa-whatsapp"></i>
+                </div>
+                <div class="support-icon" style="background: #0088cc; color: white;" onclick="openSupportLink('tg')">
+                    <i class="fab fa-telegram-plane"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="app-container">
+        
+        <!-- AUTH SCREEN -->
+        <div id="auth-view" class="auth-screen hidden">
+            <div style="margin-bottom: 30px;">
+                <div class="logo-box">
+                    <i class="fas fa-layer-group fa-2x" style="color: white;"></i>
+                </div>
+                <h2 style="color:var(--primary);">Bitmax</h2>
+                <p style="color: #888;">Secure Asset Management</p>
+            </div>
+
+            <!-- Login -->
+            <div id="form-login" style="width: 100%;">
+                <input type="email" id="l-email" class="auth-input" placeholder="Email Address">
+                
+                <div class="password-wrapper">
+                    <input type="password" id="l-pass" class="auth-input" placeholder="Password">
+                    <i class="fas fa-eye toggle-password" onclick="togglePassword('l-pass', this)"></i>
+                </div>
+
+                <button class="btn btn-primary" onclick="login()">Log In</button>
+                <button class="btn btn-outline" style="margin-top: 10px; border:none; color:#666;" onclick="toggleAuth('reg')">Create Account</button>
+            </div>
+
+            <!-- Register -->
+            <div id="form-reg" class="hidden" style="width: 100%;">
+                <input type="text" id="r-name" class="auth-input" placeholder="Full Name">
+                <input type="email" id="r-email" class="auth-input" placeholder="Email Address">
+                
+                <div class="password-wrapper">
+                    <input type="password" id="r-pass" class="auth-input" placeholder="Create Password">
+                    <i class="fas fa-eye toggle-password" onclick="togglePassword('r-pass', this)"></i>
+                </div>
+
+                <input type="text" id="r-ref" class="auth-input" placeholder="Invitation Code (Optional)">
+                <button class="btn btn-primary" onclick="register()">Register Now</button>
+                <button class="btn btn-outline" style="margin-top: 10px; border:none; color:#666;" onclick="toggleAuth('login')">Back to Login</button>
+            </div>
+        </div>
+
+        <!-- MAIN APP -->
+        <div id="main-view" class="hidden" style="height: 100%; display: flex; flex-direction: column;">
+            
+            <!-- Header -->
+            <div class="header">
+                <div class="user-info" id="header-user-info">
+                    <h3 id="u-name">User</h3>
+                    <p id="u-id">ID: 000000</p>
+                </div>
+                <div class="header-back hidden" id="header-back-btn" onclick="goBack()">
+                    <i class="fas fa-arrow-left"></i> <span>Back</span>
+                </div>
+
+                <div class="header-icons">
+                    <i class="fab fa-youtube" onclick="openSupportLink('youtube')" style="color: #FF0000;"></i>
+                    <i class="fas fa-headset" onclick="showSupportPopup()"></i>
+                    <i class="fas fa-sign-out-alt" onclick="confirmLogout()" style="color: var(--danger);"></i>
+                </div>
+            </div>
+
+            <!-- 1. HOME -->
+            <div id="page-home" class="page-content">
+                <div class="card" style="padding: 10px; display: flex; align-items: center; gap: 10px; background: #fff8e1; border: none;">
+                    <i class="fas fa-bullhorn" style="color: #ffa000;"></i>
+                    <div style="flex:1; overflow:hidden;">
+                         <marquee style="font-size: 12px; color: #555; font-weight:500;" id="marquee-text" scrollamount="5" direction="left">Welcome to Bitmax. Start your investment journey today.</marquee>
+                    </div>
+                </div>
+
+                <div class="balance-card">
+                    <p class="total-bal-label">Wallet Balance(USDT)</p>
+                    <h1 class="total-bal-amount">
+                        <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon-lg" alt="USDT">
+                        <span id="u-balance">0.00000000</span>
+                    </h1>
+                    
+                    <div class="action-row">
+                        <div class="action-btn" onclick="nav('wallet'); switchWalletTab('deposit')">
+                            <i class="fas fa-plus-circle" style="color:var(--primary);"></i> 
+                            <span>Deposit</span>
+                        </div>
+                        <div class="action-btn" onclick="nav('wallet', 'withdraw')">
+                            <i class="fas fa-arrow-circle-down" style="color:var(--primary);"></i> 
+                            <span>Withdraw</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="margin: 20px 0 10px 0; font-size: 16px; color: var(--text-main);">Quick Access</h3>
+                <div class="menu-grid">
+                    <div class="menu-item" onclick="nav('invest')">
+                        <div class="menu-icon"><i class="fas fa-chart-line"></i></div>
+                        <span class="menu-label">Plans</span>
+                    </div>
+                    <div class="menu-item" onclick="nav('gift')">
+                        <div class="menu-icon"><i class="fas fa-gift"></i></div>
+                        <span class="menu-label">Rewards</span>
+                    </div>
+                    <div class="menu-item" onclick="nav('team')">
+                        <div class="menu-icon"><i class="fas fa-users"></i></div>
+                        <span class="menu-label">Team</span>
+                    </div>
+                    <!-- NEW COMMISSION BUTTON -->
+                    <div class="menu-item" onclick="nav('commission')">
+                        <div class="menu-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                        <span class="menu-label">Commission</span>
+                    </div>
+                    <!-- END NEW BUTTON -->
+                    <div class="menu-item" onclick="nav('profile')">
+                        <div class="menu-icon"><i class="fas fa-user-cog"></i></div>
+                        <span class="menu-label">Settings</span>
+                    </div>
+                </div>
+                
+                <h3 style="margin: 20px 0 10px 0; font-size: 16px; color: var(--text-main);">My Active Plans</h3>
+                <div id="home-active-plans">
+                    <p style="font-size: 12px; color: #999; text-align: center; padding: 10px;">No active plans running.</p>
+                </div>
+            </div>
+
+            <!-- 2. INVEST -->
+            <div id="page-invest" class="page-content hidden">
+                <h2 style="margin-bottom: 20px; color: var(--text-main);">Investment Plans</h2>
+                <div id="plans-container"></div>
+            </div>
+
+            <!-- 3. GIFT -->
+            <div id="page-gift" class="page-content hidden">
+                <div class="card" style="text-align: center; background: linear-gradient(135deg, var(--primary) 0%, #1e88e5 100%); border:none;">
+                    <i class="fas fa-trophy fa-3x" style="color: #ffc107; margin-bottom: 10px;"></i>
+                    <h2 style="color: white;">Exclusive Rewards</h2>
+                    <p style="font-size: 12px; color: #eee;">Only ACTIVE Level 1 members count.</p>
+                </div>
+
+                <div class="card" style="background: #e3f2fd; border-left: 4px solid var(--primary);">
+                    <div class="flex-between">
+                        <div>
+                            <h5 style="color:var(--primary);">How to Claim?</h5>
+                            <p style="font-size:11px; color:#555;">Reach target (Deposit &ge; $10 Members), screenshot this & contact support.</p>
+                        </div>
+                        <button class="btn btn-primary" style="width: auto; padding: 8px 15px; font-size: 12px;" onclick="showSupportPopup()">Claim</button>
+                    </div>
+                </div>
+                
+                <h3 style="margin-bottom: 15px; color: var(--text-main);">Available Gifts</h3>
+                <div id="gift-list-container"></div>
+            </div>
+
+            <!-- 4. ACTIVE PLANS -->
+            <div id="page-active" class="page-content hidden">
+                <h2 style="margin-bottom: 20px;">My Active Plans</h2>
+                <div id="active-plans-list"></div>
+            </div>
+
+            <!-- 5. WALLET -->
+            <div id="page-wallet" class="page-content hidden">
+                <div class="card">
+                    <div class="flex-between">
+                        <span style="color: var(--text-gray);">Current Balance</span>
+                        <h2 class="currency-wrap left" style="color:var(--balance-green);">
+                            <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon" alt="USDT">
+                            <span id="w-balance">0.00</span>
+                        </h2>
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="btn-dep-tab" class="btn btn-primary" onclick="switchWalletTab('deposit')">Deposit</button>
+                    <button id="btn-wd-tab" class="btn btn-outline" onclick="switchWalletTab('withdraw')">Withdraw</button>
+                </div>
+
+                <!-- DEPOSIT -->
+                <div id="sec-deposit">
+                    <p class="text-gray" style="margin-bottom: 10px; font-size: 12px;">Select Payment Gateway</p>
+                    
+                    <div class="method-select">
+                        <div class="method-opt active" onclick="selMethod('TRC20', this)">
+                            <img id="logo-trc20" src="https://cryptologos.cc/logos/trust-wallet-token-twt-logo.png" class="gateway-img" alt="Trust Wallet">
+                            <div style="font-weight:600; font-size:13px; color:#333;">Trust Wallet</div>
+                            <div style="font-size:10px;">USDT (TRC20)</div>
+                        </div>
+                        <div class="method-opt" onclick="selMethod('BEP20', this)">
+                            <img id="logo-bep20" src="https://upload.wikimedia.org/wikipedia/commons/e/e8/Binance_Logo.svg" class="gateway-img" alt="Binance">
+                            <div style="font-weight:600; font-size:13px; color:#333;">Binance</div>
+                            <div style="font-size:10px;">USDT (BEP20)</div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="text-align: center;">
+                        <p class="text-gray" style="font-size: 11px;">SCAN OR COPY ADDRESS</p>
+                        <img id="wallet-qr-img" src="https://placehold.co/150x150?text=Loading+QR..." style="width: 140px; height: 140px; margin: 10px auto; display: block; border-radius: 8px; object-fit: contain;" alt="QR">
+                        
+                        <h4 id="admin-wallet-address" style="word-break: break-all; margin: 10px 0; color: #333; font-size:13px; background:#f5f5f5; padding:10px; border-radius:8px;">Loading...</h4>
+                        <button class="btn btn-outline" style="padding: 8px; font-size: 12px; width: auto;" onclick="copyAddr()">Copy Address</button>
+                    </div>
+
+                    <p style="font-size:12px; color:var(--text-gray); margin-bottom:5px;">Amount & Proof</p>
+                    <input type="number" id="dep-amount" class="auth-input" placeholder="Enter Amount (USDT)">
+                    <input type="text" id="dep-tid" class="auth-input" placeholder="Transaction ID (TRX/TID)">
+                    
+                    <p style="font-size:11px; color:var(--text-gray); margin-bottom:5px;">Upload Proof (Screenshot)</p>
+                    <input type="file" id="dep-proof" accept="image/*" class="auth-input" style="padding: 10px;">
+
+                    <button class="btn btn-primary" onclick="submitDeposit()">Submit Deposit</button>
+
+                    <div style="margin-top: 30px;">
+                        <h3>Deposit History</h3>
+                        <div id="deposit-history-list">Loading...</div>
+                    </div>
+                </div>
+
+                <!-- WITHDRAW -->
+                <div id="sec-withdraw" class="hidden">
+                    <div style="background: #ffebee; padding: 10px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid var(--danger);">
+                        <p style="font-size: 11px; color: #c62828;">Note: Min Withdrawal $1. Withdrawal time 24/7 (Process time 10-30mins).</p>
+                    </div>
+
+                    <select id="wd-method" class="auth-input">
+                        <option value="TRC20">USDT (TRC20)</option>
+                        <option value="BEP20">USDT (BEP20)</option>
+                    </select>
+                    <input type="text" id="wd-addr" class="auth-input" placeholder="Wallet Address / Number">
+                    <input type="text" id="wd-title" class="auth-input" placeholder="Account Title (Name)">
+                    <input type="number" id="wd-amount" class="auth-input" placeholder="Amount (USDT) - Min 1">
+                    <button class="btn btn-primary" onclick="submitWithdraw()">Request Withdrawal</button>
+
+                    <div style="margin-top: 30px;">
+                        <h3>Withdrawal History</h3>
+                        <div id="withdrawal-history-list">Loading...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6. TEAM -->
+            <div id="page-team" class="page-content hidden">
+                <div class="card" style="text-align: center;">
+                    <i class="fas fa-users fa-3x" style="color: var(--primary); margin-bottom: 10px;"></i>
+                    <h3>My Team</h3>
+                    
+                    <div style="display: flex; gap:10px; justify-content:center; margin-top:10px;">
+                        <div style="background:#f5f5f5; padding:5px 10px; border-radius:8px;">
+                            <small class="text-gray">Total</small>
+                            <h4 id="team-total-count">0</h4>
+                        </div>
+                        <div style="background:#e8f5e9; padding:5px 10px; border-radius:8px; border:1px solid var(--success);">
+                            <small class="text-gray">Active (>$10)</small>
+                            <h4 id="team-active-count" style="color:var(--success);">0</h4>
+                        </div>
+                    </div>
+
+                    <p class="text-gray" style="font-size: 12px; margin-top: 15px;">Invitation Link</p>
+                    <div class="auth-input" style="margin-top: 5px; display: flex; justify-content: space-between; align-items: center; background: white;">
+                        <span id="my-ref-link" style="font-size: 12px; font-weight: bold; color: #333; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">Generating...</span>
+                        <i class="fas fa-copy" onclick="copyRefLink()" style="color: var(--primary); cursor: pointer; margin-left: 10px;"></i>
+                    </div>
+                </div>
+                
+                <div class="card" style="background: #e0f2f1; border-left: 4px solid var(--balance-green);">
+                    <h5 style="color: var(--balance-green); margin-bottom: 5px;">Commission Rules</h5>
+                    <p style="font-size: 12px;">Level 1 Reward: <b>10%</b></p>
+                    <p style="font-size: 12px;">Level 2 Reward: <b>5%</b></p>
+                    <p style="font-size: 10px; color:#555; margin-top:5px;">*Gifts/Rewards only for Active L1 (Deposit &ge; $10)</p>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button id="btn-l1" class="btn btn-primary" onclick="showTeamLevel(1)">Level 1 (<span id="count-l1">0</span>)</button>
+                    <button id="btn-l2" class="btn btn-outline" onclick="showTeamLevel(2)">Level 2 (<span id="count-l2">0</span>)</button>
+                </div>
+
+                <div id="team-list-container" class="card" style="padding: 0; overflow: hidden;">
+                    <p style="text-align: center; padding: 20px; color: #999;">Loading...</p>
+                </div>
+            </div>
+
+            <!-- 7. NEW COMMISSION PAGE -->
+            <div id="page-commission" class="page-content hidden">
+                <div class="card" style="text-align: center; background: #e8f5e9; border: none;">
+                    <span class="text-gray" style="font-size: 13px;">Total Commissions Earned</span>
+                    <h1 class="currency-wrap" style="color: var(--balance-green); margin-top: 5px;">
+                        <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon-lg" alt="USDT">
+                        <span id="total-commission-display">0.00</span>
+                    </h1>
+                </div>
+
+                <h3 style="margin-bottom: 15px; color: var(--text-main);">Commission History</h3>
+                <div id="commission-history-list">
+                    <p style="text-align: center; color: #999;">Loading history...</p>
+                </div>
+            </div>
+
+            <!-- 8. PROFILE -->
+            <div id="page-profile" class="page-content hidden">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="width: 100px; height: 100px; border-radius: 50%; margin: 0 auto; overflow: hidden; border: 3px solid var(--primary); box-shadow: 0 4px 15px rgba(33, 150, 243, 0.2);">
+                        <img id="p-image" src="" style="width: 100%; height: 100%; object-fit: cover;" alt="Profile">
+                    </div>
+                    <h3 id="p-name" style="margin-top: 10px;">User</h3>
+                    <p id="p-email" class="text-gray">email@domain.com</p>
+                </div>
+
+                <div class="flex-between" style="margin-bottom: 20px; gap: 10px;">
+                    <div class="card" style="flex: 1; text-align: center; margin: 0; padding: 10px;">
+                        <span style="font-size: 11px; color: #888;">TOTAL EARNING</span>
+                        <h4 style="margin-top: 5px;" class="currency-wrap">
+                            <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon" alt="USDT">
+                            <span id="p-earn">0.00</span>
+                        </h4>
+                    </div>
+                    <div class="card" style="flex: 1; text-align: center; margin: 0; padding: 10px;">
+                        <span style="font-size: 11px; color: #888;">TOTAL DEPOSIT</span>
+                        <h4 style="margin-top: 5px;" class="currency-wrap">
+                            <img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon" alt="USDT">
+                            <span id="p-dep">0.00</span>
+                        </h4>
+                    </div>
+                </div>
+
+                <div class="card" style="padding: 15px; display: flex; align-items: center; gap: 15px; cursor: pointer; border: 1px solid #eee;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg" style="width: 40px; height: 40px;" alt="Play Store">
+                    <div style="flex: 1;">
+                        <h4 style="font-size: 14px; margin-bottom: 2px;">Google Play</h4>
+                        <div style="display: inline-block; background: #e3f2fd; color: var(--primary); font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">COMING SOON</div>
+                    </div>
+                    <i class="fas fa-lock" style="color: #ccc;"></i>
+                </div>
+
+                <div class="card menu-item" style="flex-direction: row; justify-content: space-between; padding: 20px;" onclick="showSupportPopup()">
+                    <span>Help Center</span>
+                    <i class="fas fa-chevron-right text-gray"></i>
+                </div>
+                <div class="card menu-item" style="flex-direction: row; justify-content: space-between; padding: 20px; color: var(--danger);" onclick="confirmLogout()">
+                    <span>Logout</span>
+                    <i class="fas fa-sign-out-alt"></i>
+                </div>
+            </div>
+
+            <!-- BOTTOM NAV -->
+            <div class="bottom-nav">
+                <div class="nav-item active" id="nav-home" onclick="nav('home')">
+                    <i class="fas fa-home"></i> <span>Home</span>
+                </div>
+                <div class="nav-item" id="nav-invest" onclick="nav('invest')">
+                    <i class="fas fa-chart-line"></i> <span>Plans</span>
+                </div>
+                <div class="nav-item" id="nav-wallet" onclick="nav('wallet')">
+                    <i class="fas fa-wallet"></i> <span>Wallet</span>
+                </div>
+                <div class="nav-item" id="nav-team" onclick="nav('team')">
+                    <i class="fas fa-users"></i> <span>Team</span>
+                </div>
+                <div class="nav-item" id="nav-profile" onclick="nav('profile')">
+                    <i class="fas fa-user"></i> <span>Me</span>
+                </div>
+            </div>
+
+        </div> 
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        const usdtIcon = '<img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon" alt="USDT">';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyD6pxsSIM0JwslMq0DJyOXySFLkbLY_jsg",
+            authDomain: "haroon-f879d.firebaseapp.com",
+            databaseURL: "https://haroon-f879d-default-rtdb.firebaseio.com",
+            projectId: "haroon-f879d",
+            storageBucket: "haroon-f879d.firebasestorage.app",
+            messagingSenderId: "242732265958",
+            appId: "1:242732265958:web:ef72eae60cb66e754c6627"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        let currentUser = null;
+        let userData = {};
+        
+        let settings = { 
+            wallets: { TRC20: "T_Admin_TRC20_Addr", BEP20: "0x_Admin_BEP20_Addr" }, 
+            qrImages: { TRC20: "", BEP20: "" },
+            gatewayLogos: { TRC20: "", BEP20: "" },
+            links: { wa: "#", tg: "#", youtube: "#" },
+            withdrawalStatus: "on", 
+            withdrawalMessage: "Withdrawals are temporarily under maintenance.",
+            marqueeConfig: { text: "Welcome to Bitmax", speed: 5 }
+        };
+
+        const plans = [
+            { id: 1, name: "Starter", price: 10, daily: 0.35, days: 365 },
+            { id: 2, name: "Bronze", price: 20, daily: 0.70, days: 365 },
+            { id: 3, name: "Silver", price: 40, daily: 1.40, days: 365 },
+            { id: 4, name: "Gold", price: 50, daily: 1.75, days: 365 },
+            { id: 5, name: "Platinum", price: 100, daily: 3.50, days: 365 },
+            { id: 6, name: "Diamond", price: 200, daily: 7.00, days: 365 },
+            { id: 7, name: "Executive", price: 500, daily: 17.50, days: 365 },
+            { id: 8, name: "Premium", price: 700, daily: 24.50, days: 365 },
+            { id: 9, name: "Elite", price: 800, daily: 28.00, days: 365 },
+            { id: 10, name: "Ultimate", price: 1000, daily: 35.00, days: 365 }
+        ];
+
+        const giftsList = [
+            { target: 100, name: "iPhone 17 Pro Max", icon: "fa-mobile-alt", sub: "100 Active L1 Members" },
+            { target: 250, name: "Dubai Ticket (10 Days)", icon: "fa-plane-departure", sub: "250 Active L1 Members" },
+            { target: 1000, name: "Changan Alsvin Car", icon: "fa-car", sub: "1000 Active L1 Members" }
+        ];
+
+        window.onload = () => {
+            fetchSettings();
+            
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref');
+            
+            auth.onAuthStateChanged(user => {
+                const loader = document.getElementById('loader');
+                if (user) {
+                    currentUser = user;
+                    loadUserData(user.uid);
+                    setTimeout(() => document.getElementById('custom-popup').classList.add('show'), 1000);
+                } else {
+                    loader.classList.add('hidden');
+                    document.getElementById('auth-view').classList.remove('hidden');
+                    document.getElementById('main-view').classList.add('hidden');
+
+                    if (refCode) {
+                        toggleAuth('reg');
+                        const rInput = document.getElementById('r-ref');
+                        rInput.value = refCode;
+                        rInput.readOnly = true;
+                        rInput.style.backgroundColor = "#e9ecef";
+                    }
+                }
+            });
+        };
+
+        function fetchSettings() {
+            db.ref('settings').on('value', snap => {
+                if(snap.exists()) {
+                    const s = snap.val();
+                    settings = { ...settings, ...s };
+                    
+                    if(s.marqueeConfig) {
+                        const marqueeEl = document.getElementById('marquee-text');
+                        if(s.marqueeConfig.text) marqueeEl.innerText = s.marqueeConfig.text;
+                        const oldMarquee = marqueeEl;
+                        const newMarquee = oldMarquee.cloneNode(true);
+                        oldMarquee.parentNode.replaceChild(newMarquee, oldMarquee);
+                    }
+                    if(s.popupConfig && s.popupConfig.rules) {
+                        const list = document.getElementById('pop-rules-list');
+                        list.innerHTML = "";
+                        if(s.popupConfig.title) document.getElementById('pop-title').innerText = s.popupConfig.title;
+                        if(s.popupConfig.subtitle) document.getElementById('pop-subtitle').innerText = s.popupConfig.subtitle;
+                        s.popupConfig.rules.forEach((r, i) => {
+                            list.innerHTML += `<div class="popup-item"><i class="fas fa-check-circle"></i><p><strong>${i+1}.</strong> ${r}</p></div>`;
+                        });
+                    }
+                    updateWalletUI(); 
+                }
+            });
+        }
+
+        function loadUserData(uid) {
+            db.ref('users/' + uid).on('value', snap => {
+                const val = snap.val();
+                if (!val) return; 
+                
+                if (val.isBanned) {
+                    Swal.fire('Suspended', 'Contact Support', 'error');
+                    auth.signOut();
+                    return;
+                }
+
+                userData = val;
+                
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('auth-view').classList.add('hidden');
+                document.getElementById('main-view').classList.remove('hidden');
+
+                document.getElementById('u-name').innerText = val.name;
+                document.getElementById('u-id').innerText = "ID: " + val.myInviteCode;
+                document.getElementById('u-balance').innerText = (val.balance || 0).toFixed(8); 
+                document.getElementById('w-balance').innerText = (val.balance || 0).toFixed(2);
+                document.getElementById('p-name').innerText = val.name;
+                document.getElementById('p-email').innerText = val.email;
+                
+                const baseUrl = window.location.href.split('?')[0];
+                document.getElementById('my-ref-link').innerText = `${baseUrl}?ref=${val.myInviteCode}`;
+
+                const imgId = parseInt(val.myInviteCode) % 99; 
+                document.getElementById('p-image').src = `https://randomuser.me/api/portraits/men/${imgId}.jpg`;
+
+                let totalDeposit = 0;
+                let totalEarned = 0;
+                if(val.activePlans) {
+                    Object.values(val.activePlans).forEach(p => {
+                        totalDeposit += p.price;
+                        totalEarned += (p.daysPassed * p.daily);
+                    });
+                }
+                
+                document.getElementById('p-dep').innerText = totalDeposit.toFixed(2);
+                document.getElementById('p-earn').innerText = totalEarned.toFixed(2);
+                
+                loadTeamDetails(val.myInviteCode);
+                renderPlans();
+                renderActivePlans();
+                loadDepositHistory(); 
+                loadWithdrawalHistory();
+                loadCommissionHistory(); // NEW FUNCTION CALL
+            });
+        }
+
+        let currentDepMethod = 'TRC20'; 
+        function switchWalletTab(tab) {
+            if(tab === 'deposit') {
+                document.getElementById('sec-deposit').classList.remove('hidden');
+                document.getElementById('sec-withdraw').classList.add('hidden');
+                document.getElementById('btn-dep-tab').className = 'btn btn-primary';
+                document.getElementById('btn-wd-tab').className = 'btn btn-outline';
+            } else {
+                document.getElementById('sec-deposit').classList.add('hidden');
+                document.getElementById('sec-withdraw').classList.remove('hidden');
+                document.getElementById('btn-dep-tab').className = 'btn btn-outline';
+                document.getElementById('btn-wd-tab').className = 'btn btn-primary';
+            }
+        }
+
+        function selMethod(m, el) {
+            currentDepMethod = m;
+            document.querySelectorAll('.method-opt').forEach(e => e.classList.remove('active'));
+            el.classList.add('active');
+            updateWalletUI();
+        }
+
+        function updateWalletUI() {
+            let addr = "Loading...";
+            let qrSrc = "https://placehold.co/150x150?text=Scan+QR"; 
+
+            if(settings.wallets) {
+                if(currentDepMethod === 'TRC20') {
+                    addr = settings.wallets.TRC20 || "Contact Admin";
+                    if(settings.qrImages && settings.qrImages.TRC20) qrSrc = settings.qrImages.TRC20;
+                }
+                if(currentDepMethod === 'BEP20') {
+                    addr = settings.wallets.BEP20 || "Contact Admin";
+                    if(settings.qrImages && settings.qrImages.BEP20) qrSrc = settings.qrImages.BEP20;
+                }
+            }
+            document.getElementById('admin-wallet-address').innerText = addr;
+            document.getElementById('wallet-qr-img').src = qrSrc;
+            
+            if(settings.gatewayLogos) {
+                if(settings.gatewayLogos.TRC20) document.getElementById('logo-trc20').src = settings.gatewayLogos.TRC20;
+                if(settings.gatewayLogos.BEP20) document.getElementById('logo-bep20').src = settings.gatewayLogos.BEP20;
+            }
+        }
+        
+        // --- DUAL WRITE DEPOSIT FUNCTION ---
+        function submitDeposit() {
+            const amt = parseFloat(document.getElementById('dep-amount').value);
+            const trx = document.getElementById('dep-tid').value;
+            const fileInput = document.getElementById('dep-proof');
+
+            if(!amt || !trx) return Swal.fire('Error', 'Fill amount and Transaction ID', 'error');
+            if(!fileInput.files.length) return Swal.fire('Error', 'Please upload proof screenshot', 'error');
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            Swal.fire({
+                title: 'Processing...', 
+                allowOutsideClick: false, 
+                heightAuto: false, // Fix layout jump
+                didOpen: () => { Swal.showLoading() }
+            });
+
+            reader.onload = function(e) {
+                const base64Img = e.target.result;
+                const reqId = db.ref('admin_requests/deposits').push().key; 
+                
+                const commonData = { 
+                    id: reqId,
+                    uid: currentUser.uid, 
+                    name: userData.name, 
+                    email: userData.email, 
+                    amount: amt, 
+                    method: currentDepMethod, 
+                    trx: trx, 
+                    status: 'pending', 
+                    date: Date.now() 
+                };
+
+                // 1. Write to Admin Queue (Image included)
+                const adminData = { ...commonData, proofImg: base64Img };
+                
+                // 2. Write to User History (Image included)
+                const userDataEntry = { ...commonData, proofImg: base64Img };
+
+                const updates = {};
+                updates[`admin_requests/deposits/${reqId}`] = adminData;
+                updates[`users/${currentUser.uid}/deposits/${reqId}`] = userDataEntry;
+
+                db.ref().update(updates).then(() => { 
+                    Swal.fire({
+                        title: 'Deposit Submitted',
+                        text: 'Admin will review your proof.',
+                        icon: 'success',
+                        timer: 2000,
+                        showConfirmButton: false,
+                        heightAuto: false
+                    }).then(() => {
+                        location.reload(); 
+                    });
+                }).catch(err => {
+                    Swal.fire('Error', 'Upload failed: ' + err.message, 'error');
+                });
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        // --- DUAL WRITE WITHDRAW FUNCTION ---
+        function submitWithdraw() {
+            if(settings.withdrawalStatus === "off") {
+                const msg = settings.withdrawalMessage || "Withdrawals are currently under maintenance.";
+                Swal.fire({ title: 'Notice', text: msg, icon: 'warning', confirmButtonColor: '#2196F3', heightAuto: false });
+                return;
+            }
+
+            let hasInvested = false;
+            if(userData.activePlans && Object.keys(userData.activePlans).length > 0) hasInvested = true;
+            if(!hasInvested) { Swal.fire({title: 'Restricted', text: 'You must have an active investment to withdraw.', icon: 'error', heightAuto: false}); return; }
+
+            const amt = parseFloat(document.getElementById('wd-amount').value);
+            const method = document.getElementById('wd-method').value;
+            const addr = document.getElementById('wd-addr').value;
+            const title = document.getElementById('wd-title').value;
+
+            if(amt > userData.balance) return Swal.fire({title: 'Error', text: 'Low Balance', icon: 'error', heightAuto: false});
+            if(amt < 1) return Swal.fire({title: 'Error', text: 'Minimum withdrawal is $1', icon: 'error', heightAuto: false});
+            if(!addr || !title || !amt) return Swal.fire({title: 'Error', text: 'Fill all details', icon: 'error', heightAuto: false});
+
+            const reqId = db.ref('admin_requests/withdrawals').push().key;
+
+            const req = { 
+                id: reqId,
+                uid: currentUser.uid, 
+                name: userData.name, 
+                email: userData.email, 
+                amount: amt, 
+                method: method, 
+                address: addr, 
+                title: title, 
+                status: 'pending', 
+                date: Date.now() 
+            };
+            
+            const updates = {};
+            updates[`users/${currentUser.uid}/balance`] = userData.balance - amt;
+            // 1. Admin Request
+            updates[`admin_requests/withdrawals/${reqId}`] = req;
+            // 2. User History
+            updates[`users/${currentUser.uid}/withdrawals/${reqId}`] = req;
+
+            db.ref().update(updates).then(() => { 
+                Swal.fire({
+                    title: 'Success!',
+                    text: 'Withdrawal Requested.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    heightAuto: false
+                }).then(() => {
+                    location.reload(); 
+                });
+            });
+        }
+
+        // --- AUTH & SYSTEM FUNCTIONS ---
+        function togglePassword(id, icon) {
+            const input = document.getElementById(id);
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        }
+
+        function login() {
+            const e = document.getElementById('l-email').value;
+            const p = document.getElementById('l-pass').value;
+            if(!e || !p) return Swal.fire('Error', 'Fill all fields', 'error');
+            
+            if(!e.endsWith('.com')) {
+                return Swal.fire('Error', 'Invalid Email Format', 'error');
+            }
+
+            document.getElementById('loader').classList.remove('hidden');
+            auth.signInWithEmailAndPassword(e, p).catch(err => { document.getElementById('loader').classList.add('hidden'); Swal.fire('Error', err.message, 'error'); });
+        }
+        
+        function register() {
+            const n = document.getElementById('r-name').value;
+            const e = document.getElementById('r-email').value;
+            const p = document.getElementById('r-pass').value;
+            const ref = document.getElementById('r-ref').value; 
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = urlParams.get('ref') || ref;
+
+            if(!n || !e || !p) return Swal.fire('Error', 'Fill all fields', 'error');
+
+            if(!e.endsWith('.com')) {
+                return Swal.fire('Error', 'Invalid Email Format', 'error');
+            }
+
+            if(!/\d/.test(p)) {
+                return Swal.fire('Error', 'Password must contain at least one number', 'error');
+            }
+
+            document.getElementById('loader').classList.remove('hidden'); 
+            
+            auth.createUserWithEmailAndPassword(e, p).then(cred => {
+                const uid = cred.user.uid;
+                const inviteCode = Math.floor(100000 + Math.random() * 900000);
+                const userObj = { name: n, email: e, password: p, balance: 0, myInviteCode: inviteCode, invitedBy: refCode || "", joined: Date.now() };
+                db.ref('users/' + uid).set(userObj).then(() => Swal.fire('Success', 'Account Created', 'success'));
+            }).catch(err => { 
+                document.getElementById('loader').classList.add('hidden'); 
+                Swal.fire('Error', err.message, 'error'); 
+            });
+        }
+
+        function toggleAuth(type) {
+            document.getElementById('form-login').classList.toggle('hidden', type === 'reg');
+            document.getElementById('form-reg').classList.toggle('hidden', type === 'login');
+        }
+
+        function confirmLogout() {
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "Do you really want to logout?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#e53935',
+                cancelButtonColor: '#2196F3',
+                confirmButtonText: 'Yes, Logout',
+                heightAuto: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    auth.signOut().then(() => location.reload());
+                }
+            })
+        }
+
+        function renderPlans() {
+            const container = document.getElementById('plans-container');
+            container.innerHTML = "";
+            plans.forEach(p => {
+                const totalProfit = (p.daily * p.days).toFixed(2);
+                container.innerHTML += `
+                <div class="card plan-card">
+                    <div class="plan-badge">ROI: ${(p.daily/p.price*100).toFixed(1)}%</div>
+                    <div class="flex-between">
+                        <h4>${p.name}</h4>
+                        <h2 class="currency-wrap left">${usdtIcon}${p.price}</h2>
+                    </div>
+                    <div class="plan-details">
+                        <div class="detail-box"><p class="detail-title">DAILY</p><p class="detail-val currency-wrap">${usdtIcon}${p.daily.toFixed(2)}</p></div>
+                        <div class="detail-box"><p class="detail-title">DAYS</p><p class="detail-val">${p.days}</p></div>
+                        <div class="detail-box"><p class="detail-title">TOTAL</p><p class="detail-val currency-wrap">${usdtIcon}${totalProfit}</p></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="buyPlan(${p.id})">Invest Now</button>
+                </div>`;
+            });
+        }
+        function buyPlan(id) {
+            const p = plans.find(x => x.id === id);
+            if(userData.balance < p.price) return Swal.fire({title: 'Error', text: 'Insufficient Balance', icon: 'error', heightAuto: false});
+            Swal.fire({ title: 'Confirm', text: `Invest ${p.price} USDT in ${p.name}?`, showCancelButton: true, confirmButtonText: 'Yes', heightAuto: false }).then((res) => {
+                if(res.isConfirmed) {
+                    const newBal = userData.balance - p.price;
+                    const purchase = { planId: p.id, name: p.name, price: p.price, daily: p.daily, totalDays: p.days, daysPassed: 0, lastClaim: 0, startTime: Date.now(), status: 'active' };
+                    db.ref('users/' + currentUser.uid + '/balance').set(newBal);
+                    db.ref('users/' + currentUser.uid + '/activePlans').push(purchase);
+                    Swal.fire({title: 'Success', text: 'Plan Activated', icon: 'success', heightAuto: false});
+                    nav('active');
+                }
+            });
+        }
+
+        function loadTeamDetails(myCode) {
+            db.ref('users').once('value', snap => {
+                const users = snap.val();
+                let teamDataL1 = [], teamDataL2 = [], activeL1Count = 0, l1Codes = [];
+                let totalTeamCount = 0;
+                let totalActiveTeamCount = 0;
+
+                // Process Level 1
+                for(let key in users) {
+                    if(users[key].invitedBy == myCode) {
+                        let totalDep = 0;
+                        if(users[key].activePlans) {
+                            Object.values(users[key].activePlans).forEach(p => totalDep += p.price);
+                        }
+                        
+                        users[key].totalDeposit = totalDep;
+                        teamDataL1.push(users[key]); 
+                        l1Codes.push(users[key].myInviteCode);
+                        
+                        if(totalDep >= 10) {
+                            activeL1Count++;
+                            totalActiveTeamCount++;
+                        }
+                    }
+                }
+
+                // Process Level 2
+                for(let key in users) { 
+                    if(l1Codes.includes(users[key].invitedBy)) {
+                        let totalDep = 0;
+                        if(users[key].activePlans) {
+                            Object.values(users[key].activePlans).forEach(p => totalDep += p.price);
+                        }
+                        users[key].totalDeposit = totalDep;
+                        teamDataL2.push(users[key]);
+                        
+                        if(totalDep >= 10) {
+                            totalActiveTeamCount++;
+                        }
+                    } 
+                }
+
+                totalTeamCount = teamDataL1.length + teamDataL2.length;
+
+                document.getElementById('count-l1').innerText = teamDataL1.length;
+                document.getElementById('count-l2').innerText = teamDataL2.length;
+                document.getElementById('team-total-count').innerText = totalTeamCount;
+                document.getElementById('team-active-count').innerText = totalActiveTeamCount;
+
+                renderGifts(activeL1Count);
+                
+                window.teamDataL1 = teamDataL1; 
+                window.teamDataL2 = teamDataL2;
+                showTeamLevel(1);
+            });
+        }
+        
+        function renderGifts(count) {
+            const container = document.getElementById('gift-list-container');
+            container.innerHTML = "";
+            giftsList.forEach((g) => {
+                const progress = Math.min((count / g.target) * 100, 100);
+                container.innerHTML += `
+                <div class="card">
+                    <div class="flex-between">
+                        <div><h4>${g.name}</h4><p class="text-gray" style="font-size:12px;">${g.sub}</p></div>
+                        <i class="fas ${g.icon} fa-2x" style="color: #333;"></i>
+                    </div>
+                    <div class="gift-target-box">TARGET: <span style="color:var(--primary); font-weight:bold;">${g.target} Active Members</span> (L1)</div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                    <p class="text-gray" style="text-align: right; font-size: 10px; margin-top: 5px;">Progress: ${count}/${g.target}</p>
+                </div>`;
+            });
+        }
+
+        function showTeamLevel(level) {
+            const container = document.getElementById('team-list-container');
+            const data = level === 1 ? (window.teamDataL1 || []) : (window.teamDataL2 || []);
+            document.getElementById('btn-l1').className = level === 1 ? 'btn btn-primary' : 'btn btn-outline';
+            document.getElementById('btn-l2').className = level === 2 ? 'btn btn-primary' : 'btn btn-outline';
+            container.innerHTML = "";
+            if(data.length === 0) { container.innerHTML = `<p style="text-align:center; padding:20px; color:#999;">No members in Level ${level}</p>`; return; }
+            
+            data.forEach(user => {
+                const isActive = user.totalDeposit >= 10;
+                const statusColor = isActive ? 'var(--success)' : '#999';
+                const statusText = isActive ? 'Active' : 'Inactive';
+
+                container.innerHTML += `
+                <div class="team-list-item">
+                    <div style="display:flex; align-items:center;">
+                        <div class="team-user-icon"><i class="fas fa-user"></i></div>
+                        <div class="team-info">
+                            <h5>${user.name} <span style="font-size:10px; background:${isActive?'#e8f5e9':'#eee'}; color:${statusColor}; padding:2px 5px; border-radius:4px;">${statusText}</span></h5>
+                            <p>Joined: ${new Date(user.joined).toLocaleDateString()}</p>
+                        </div>
+                    </div>
+                    <div class="team-amt"><i class="fas fa-circle" style="font-size:8px; color:${statusColor}; margin-right:5px;"></i>${usdtIcon} ${user.totalDeposit.toFixed(2)}</div>
+                </div>`;
+            });
+        }
+
+        function renderActivePlans() {
+            const listIds = ['active-plans-list', 'home-active-plans'];
+            const aps = userData.activePlans;
+            let html = "";
+            if(aps) {
+                Object.entries(aps).forEach(([key, plan]) => {
+                    if(plan.status === 'completed') return;
+                    const remaining = 86400000 - (Date.now() - plan.lastClaim);
+                    const progress = Math.min((plan.daysPassed / plan.totalDays) * 100, 100);
+                    html += `
+                    <div class="card active-plan-card">
+                        <div class="flex-between"><h4>${plan.name} (${usdtIcon}${plan.price})</h4><span style="color:var(--balance-green); font-size:12px;">Earn: ${usdtIcon}${plan.daily}/day</span></div>
+                        <div id="action-area-${key}"></div>
+                        <div class="progress-bar"><div class="progress-fill" style="width: ${progress}%"></div></div>
+                        <div class="flex-between" style="font-size:11px; margin-top:5px; color:#999;"><span>Day: ${plan.daysPassed}/${plan.totalDays}</span><span>Earned: ${usdtIcon}${(plan.daysPassed * plan.daily).toFixed(2)}</span></div>
+                    </div>`;
+                    setTimeout(() => startPlanTimer(key, (plan.lastClaim === 0 ? 0 : remaining), plan), 100);
+                });
+            } else { html = "<p style='text-align:center; color:#999;'>No Active Plans</p>"; }
+            listIds.forEach(id => { if(document.getElementById(id)) document.getElementById(id).innerHTML = html; });
+        }
+
+        function startPlanTimer(key, remainingMs, plan) {
+            const containers = document.querySelectorAll(`[id="action-area-${key}"]`);
+            if(containers.length === 0) return;
+            const updateUI = (content) => { containers.forEach(c => c.innerHTML = content); };
+            if (remainingMs <= 0) {
+                updateUI(`<button class="btn btn-primary" style="margin-top:10px; background:var(--balance-green);" onclick="claimProfit('${key}')">CLAIM PROFIT (${usdtIcon}${plan.daily})</button>`);
+                return;
+            }
+            const update = () => {
+                remainingMs -= 1000;
+                if(remainingMs <= 0) { clearInterval(interval); startPlanTimer(key, 0, plan); return; }
+                const h = Math.floor(remainingMs / (1000*60*60)), m = Math.floor((remainingMs % (1000*60*60)) / (1000*60)), s = Math.floor((remainingMs % (1000*60)) / 1000);
+                updateUI(`<div class="timer-display">${h}h ${m}m ${s}s</div>`);
+            };
+            update(); const interval = setInterval(update, 1000);
+        }
+
+        function claimProfit(key) {
+            const planRef = db.ref(`users/${currentUser.uid}/activePlans/${key}`);
+            planRef.once('value', snap => {
+                const p = snap.val();
+                const newDays = p.daysPassed + 1;
+                let updates = { lastClaim: Date.now(), daysPassed: newDays };
+                if(newDays >= p.totalDays) updates.status = 'completed';
+                planRef.update(updates).then(() => {
+                    db.ref(`users/${currentUser.uid}/balance`).set(parseFloat(userData.balance) + parseFloat(p.daily));
+                    Swal.fire({ title: 'Collected!', icon: 'success', timer: 1500, showConfirmButton: false, heightAuto: false });
+                });
+            });
+        }
+
+        // --- UPDATED HISTORY LOADERS (Reading from separate User path) ---
+        function loadDepositHistory() {
+            // Reads from users/{uid}/deposits so admin can clear their own queue without affecting user
+            db.ref(`users/${currentUser.uid}/deposits`).limitToLast(10).on('value', snap => {
+                let html = "";
+                if(snap.exists()){ snap.forEach(c => { const d = c.val(); let color = d.status==='approved'?'var(--success)':d.status==='rejected'?'var(--danger)':'#ffc107'; html += `<div class="card flex-between" style="padding:10px;"><div><small class="text-gray">Deposit (${d.method})</small><br><b class="currency-wrap left">${usdtIcon} ${d.amount}</b></div><span style="color:${color}; font-size:12px; font-weight:bold;">${d.status.toUpperCase()}</span></div>`; }); } 
+                else { html = "<p style='text-align:center; color:#999; font-size:12px;'>No deposits yet.</p>"; }
+                document.getElementById('deposit-history-list').innerHTML = html;
+            });
+        }
+        function loadWithdrawalHistory() {
+            // Reads from users/{uid}/withdrawals
+            db.ref(`users/${currentUser.uid}/withdrawals`).limitToLast(10).on('value', snap => {
+                let html = "";
+                if(snap.exists()){ snap.forEach(c => { const d = c.val(); let color = d.status==='approved'?'var(--success)':d.status==='rejected'?'var(--danger)':'#ffc107'; html += `<div class="card flex-between" style="padding:10px;"><div><small class="text-gray">${d.method}</small><br><b class="currency-wrap left">${usdtIcon} ${d.amount}</b></div><span style="color:${color}; font-size:12px; font-weight:bold;">${d.status.toUpperCase()}</span></div>`; }); } 
+                else { html = "<p style='text-align:center; color:#999; font-size:12px;'>No withdrawals yet.</p>"; }
+                document.getElementById('withdrawal-history-list').innerHTML = html;
+            });
+        }
+
+        // --- NEW COMMISSION LOADER ---
+        function loadCommissionHistory() {
+            // Assumes data is stored at: users/{uid}/commissions/{pushId}
+            // Data Structure Example: { amount: 5, type: "Level 1 Reward", date: 12345678, fromUser: "John" }
+            const container = document.getElementById('commission-history-list');
+            const totalDisplay = document.getElementById('total-commission-display');
+            
+            db.ref(`users/${currentUser.uid}/commissions`).on('value', snap => {
+                let html = "";
+                let totalComm = 0;
+
+                if(snap.exists()) {
+                    // Create an array to sort by date desc
+                    let comms = [];
+                    snap.forEach(child => {
+                        comms.push(child.val());
+                    });
+                    
+                    // Sort descending (newest first)
+                    comms.sort((a, b) => b.date - a.date);
+
+                    // Build list
+                    html = '<div class="card" style="padding:0; overflow:hidden;">';
+                    comms.forEach(c => {
+                        totalComm += parseFloat(c.amount || 0);
+                        const dateStr = new Date(c.date).toLocaleDateString();
+                        html += `
+                        <div class="comm-item">
+                            <div style="display:flex; align-items:center;">
+                                <div class="comm-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                                <div>
+                                    <h5 style="margin-bottom:2px; font-size:13px;">${c.type || 'Commission'}</h5>
+                                    <p style="font-size:11px; color:#888;">${dateStr} - ${c.fromUser || 'System'}</p>
+                                </div>
+                            </div>
+                            <div style="font-weight:bold; color:var(--balance-green);">${usdtIcon} +${parseFloat(c.amount).toFixed(2)}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+
+                } else {
+                    html = "<div class='card' style='text-align:center; color:#999; padding:20px;'><i class='fas fa-receipt fa-2x' style='margin-bottom:10px; color:#eee;'></i><p>No commissions found.</p></div>";
+                }
+
+                container.innerHTML = html;
+                totalDisplay.innerText = totalComm.toFixed(2);
+            });
+        }
+
+        function nav(page, sub) {
+            document.querySelectorAll('.page-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('page-' + page).classList.remove('hidden');
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            if(document.getElementById('nav-' + page)) document.getElementById('nav-' + page).classList.add('active');
+
+            if(page === 'home') {
+                document.getElementById('header-user-info').classList.remove('hidden');
+                document.getElementById('header-back-btn').classList.add('hidden');
+            } else {
+                // Generic logic for inner pages (Invest, Team, Wallet, Commission, etc.)
+                document.getElementById('header-user-info').classList.add('hidden');
+                document.getElementById('header-back-btn').classList.remove('hidden');
+            }
+
+            if(page === 'active') renderActivePlans();
+            if(page === 'wallet' && sub === 'withdraw') switchWalletTab('withdraw');
+        }
+
+        function goBack() {
+            nav('home');
+        }
+
+        function copyAddr() { navigator.clipboard.writeText(document.getElementById('admin-wallet-address').innerText); Swal.fire({title: 'Copied', icon: 'success', timer: 1500, showConfirmButton: false, heightAuto: false}); }
+        function copyRefLink() { navigator.clipboard.writeText(document.getElementById('my-ref-link').innerText.split('?ref=')[0] + '?ref=' + userData.myInviteCode); Swal.fire({title: 'Copied', icon: 'success', timer: 1500, showConfirmButton: false, heightAuto: false}); }
+        function closePopup(id) { document.getElementById(id).classList.remove('show'); }
+        function showSupportPopup() { document.getElementById('support-popup').classList.add('show'); }
+        function openSupportLink(type) { 
+            let url = "";
+            if (type === 'wa') url = settings.links.wa;
+            else if (type === 'tg') url = settings.links.tg;
+            else if (type === 'youtube') url = settings.links.youtube || '#';
+            
+            if (url && url !== "#") window.open(url, '_blank');
+            else Swal.fire({title: 'Info', text: 'Link not set by admin', icon: 'info', heightAuto: false});
+        }
+
+    </script>
+</body>
+</html>
