@@ -1,4 +1,4 @@
-<!-- START OF FILE ai_studio_code (Ultra Fast Claim & New Config) -->
+<!-- START OF FILE ai_studio_code (Dynamic App Download Link) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,6 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Bitmax | User Panel</title>
     
+    <!-- PWA Manifest (Optional - kept for style) -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"Bitmax App","short_name":"Bitmax","start_url":".","display":"standalone","background_color":"#ffffff","theme_color":"#2196F3","icons":[{"src":"https://placehold.co/192x192/2196F3/ffffff?text=B","sizes":"192x192","type":"image/png"},{"src":"https://placehold.co/512x512/2196F3/ffffff?text=B","sizes":"512x512","type":"image/png"}]}'>
+    <meta name="theme-color" content="#2196F3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
     <!-- Fonts & Icons -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -164,7 +170,7 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: 0.2s;
         }
         .menu-item:active .menu-icon { transform: scale(0.95); background: var(--primary); color: white; }
-        .menu-label { font-size: 11px; color: var(--text-gray); font-weight: 500; }
+        .menu-label { font-size: 11px; color: var(--text-gray); font-weight: 500; text-align: center; line-height: 1.2;}
 
         .plan-card { position: relative; overflow: hidden; background: white; border: none; }
         .plan-badge {
@@ -431,16 +437,22 @@
                         <div class="menu-icon"><i class="fas fa-gift"></i></div>
                         <span class="menu-label">Rewards</span>
                     </div>
+                    
+                    <!-- NEW APP DOWNLOAD BUTTON (Dynamic Link) -->
+                    <div class="menu-item" onclick="downloadApk()">
+                        <div class="menu-icon"><i class="fas fa-cloud-download-alt"></i></div>
+                        <span class="menu-label">App Download</span>
+                    </div>
+                    <!-- END NEW APP DOWNLOAD BUTTON -->
+
                     <div class="menu-item" onclick="nav('team')">
                         <div class="menu-icon"><i class="fas fa-users"></i></div>
                         <span class="menu-label">Team</span>
                     </div>
-                    <!-- NEW COMMISSION BUTTON -->
                     <div class="menu-item" onclick="nav('commission')">
                         <div class="menu-icon"><i class="fas fa-hand-holding-usd"></i></div>
                         <span class="menu-label">Commission</span>
                     </div>
-                    <!-- END NEW BUTTON -->
                     <div class="menu-item" onclick="nav('profile')">
                         <div class="menu-icon"><i class="fas fa-user-cog"></i></div>
                         <span class="menu-label">Settings</span>
@@ -695,7 +707,7 @@
     <script>
         const usdtIcon = '<img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon" alt="USDT">';
 
-        // UPDATED FIREBASE CONFIG (bitmax-9f1ee)
+        // FIREBASE CONFIG
         const firebaseConfig = {
           apiKey: "AIzaSyB3IPmYvMnEFwEsrbf8TuN552HllOUK0Zg",
           authDomain: "bitmax-9f1ee.firebaseapp.com",
@@ -720,7 +732,8 @@
             links: { wa: "#", tg: "#", youtube: "#" },
             withdrawalStatus: "on", 
             withdrawalMessage: "Withdrawals are temporarily under maintenance.",
-            marqueeConfig: { text: "Welcome to Bitmax", speed: 5 }
+            marqueeConfig: { text: "Welcome to Bitmax", speed: 5 },
+            appDownloadLink: "" // Placeholder for Admin to set later
         };
 
         const plans = [
@@ -741,6 +754,37 @@
             { target: 250, name: "Dubai Ticket (10 Days)", icon: "fa-plane-departure", sub: "250 Active L1 Members" },
             { target: 1000, name: "Changan Alsvin Car", icon: "fa-car", sub: "1000 Active L1 Members" }
         ];
+
+        // --- DYNAMIC APP DOWNLOAD LOGIC ---
+        function downloadApk() {
+            const link = settings.appDownloadLink;
+
+            if (link && link !== "#" && link.trim() !== "") {
+                // If a link exists, download it
+                Swal.fire({
+                    title: 'Downloading...',
+                    text: 'Your download is starting.',
+                    icon: 'success',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                // Use a short timeout to allow the popup to show before opening the link
+                setTimeout(() => {
+                    window.open(link, '_blank');
+                }, 800);
+            } else {
+                // If NO link exists (Admin hasn't set it yet)
+                Swal.fire({
+                    title: 'Coming Soon',
+                    text: 'The App is currently being updated. Please check back later.',
+                    icon: 'info',
+                    confirmButtonText: 'Okay',
+                    confirmButtonColor: 'var(--primary)',
+                    heightAuto: false
+                });
+            }
+        }
+        // --- END APP DOWNLOAD LOGIC ---
 
         window.onload = () => {
             fetchSettings();
