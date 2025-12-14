@@ -1,4 +1,4 @@
-<!-- START OF FILE ai_studio_code (Ultra Fast & Fixed) -->
+<!-- START OF FILE ai_studio_code (Ultra Fast Claim & New Config) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -695,14 +695,15 @@
     <script>
         const usdtIcon = '<img src="https://cryptologos.cc/logos/tether-usdt-logo.png?v=026" class="usdt-icon" alt="USDT">';
 
+        // UPDATED FIREBASE CONFIG (bitmax-9f1ee)
         const firebaseConfig = {
-            apiKey: "AIzaSyD6pxsSIM0JwslMq0DJyOXySFLkbLY_jsg",
-            authDomain: "haroon-f879d.firebaseapp.com",
-            databaseURL: "https://haroon-f879d-default-rtdb.firebaseio.com",
-            projectId: "haroon-f879d",
-            storageBucket: "haroon-f879d.firebasestorage.app",
-            messagingSenderId: "242732265958",
-            appId: "1:242732265958:web:ef72eae60cb66e754c6627"
+          apiKey: "AIzaSyB3IPmYvMnEFwEsrbf8TuN552HllOUK0Zg",
+          authDomain: "bitmax-9f1ee.firebaseapp.com",
+          databaseURL: "https://bitmax-9f1ee-default-rtdb.firebaseio.com",
+          projectId: "bitmax-9f1ee",
+          storageBucket: "bitmax-9f1ee.firebasestorage.app",
+          messagingSenderId: "844983206470",
+          appId: "1:844983206470:web:f3e8bc28b412e56938c047"
         };
         
         firebase.initializeApp(firebaseConfig);
@@ -1374,9 +1375,9 @@
             update(); const interval = setInterval(update, 1000);
         }
 
-        // --- ULTRA FAST OPTIMISTIC CLAIM ---
+        // --- ULTRA FAST INSTANT CLAIM LOGIC ---
         function claimProfit(key, dailyAmt, totalDays, currentDays) {
-            // 1. Instant UI Feedback (0.1s)
+            // 1. Instant UI Feedback (0ms latency)
             const btn = document.getElementById(`btn-claim-${key}`);
             if(btn) { 
                 btn.disabled = true; 
@@ -1384,36 +1385,44 @@
                 btn.style.background = "#ccc";
             }
             
-            // 2. Optimistic Balance Update
-            const newBal = (parseFloat(userData.balance) + parseFloat(dailyAmt));
+            // 2. Optimistic Balance Update (Update HTML directly before DB writes)
+            const currentBal = parseFloat(document.getElementById('w-balance').innerText) || 0;
+            const newBal = currentBal + parseFloat(dailyAmt);
+            
+            // Update displayed numbers instantly
             document.getElementById('w-balance').innerText = newBal.toFixed(2);
             document.getElementById('u-balance').innerText = newBal.toFixed(8);
             
-            // 3. Use Toast Notification instead of blocking Alert (Smoother)
+            // 3. Smooth Toast Notification (No Lag)
             const Toast = Swal.mixin({
                 toast: true,
-                position: 'top-end',
+                position: 'top',
                 showConfirmButton: false,
-                timer: 2000,
-                timerProgressBar: true
+                timer: 1500,
+                timerProgressBar: false
             });
             Toast.fire({
                 icon: 'success',
                 title: `+${dailyAmt} USDT Claimed`
             });
 
-            // 4. Background Server Update
+            // 4. Background Database Sync
             const planRef = db.ref(`users/${currentUser.uid}/activePlans/${key}`);
             const newDays = parseInt(currentDays) + 1;
             let updates = { lastClaim: Date.now(), daysPassed: newDays };
-            if(newDays >= parseInt(totalDays)) updates.status = 'completed';
             
+            if(newDays >= parseInt(totalDays)) {
+                updates.status = 'completed';
+            }
+            
+            // Send update quietly in background
             planRef.update(updates).then(() => {
+                // Ensure server balance matches our optimistic update
                 db.ref(`users/${currentUser.uid}/balance`).set(newBal);
             });
         }
 
-        // --- UPDATED HISTORY LOADERS (Reading from separate User path) ---
+        // --- UPDATED HISTORY LOADER ---
         function loadDepositHistory() {
             // Reads from users/{uid}/deposits so admin can clear their own queue without affecting user
             db.ref(`users/${currentUser.uid}/deposits`).limitToLast(10).on('value', snap => {
