@@ -1,4 +1,4 @@
-<!-- START OF FILE ai_studio_code (Fixed Commission Logic) -->
+<!-- START OF FILE ai_studio_code (Optimized) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,7 +51,7 @@
         body.swal2-shown { height: 100% !important; overflow-y: hidden !important; }
 
         .usdt-icon { width: 18px; height: 18px; vertical-align: middle; margin-right: 5px; margin-bottom: 3px; }
-        .usdt-icon-lg { width: 32px; height: 32px; vertical-align: middle; margin-right: 8px; margin-bottom: 4px; }
+        .usdt-icon-lg { width: 28px; height: 28px; vertical-align: middle; margin-right: 8px; margin-bottom: 4px; }
         
         .currency-wrap { display: flex; align-items: center; justify-content: center; }
         .currency-wrap.left { justify-content: flex-start; }
@@ -136,8 +136,10 @@
         }
         .total-bal-label { font-size: 13px; color: var(--text-gray); letter-spacing: 0.5px; font-weight: 500;}
         .total-bal-amount { 
-            font-size: 32px; font-weight: 700; color: var(--balance-green); 
+            font-size: 24px; /* Reduced for better fit */
+            font-weight: 700; color: var(--balance-green); 
             margin: 5px 0 15px 0; display: flex; align-items: center; justify-content: flex-start;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         
         .action-row { display: flex; gap: 15px; margin-top: 10px; }
@@ -968,39 +970,50 @@
             if(amt < 1) return Swal.fire({title: 'Error', text: 'Minimum withdrawal is $1', icon: 'error', heightAuto: false});
             if(!addr || !title || !amt) return Swal.fire({title: 'Error', text: 'Fill all details', icon: 'error', heightAuto: false});
 
-            const reqId = db.ref('admin_requests/withdrawals').push().key;
+            // CONFIRMATION DIALOG ADDED
+            Swal.fire({
+                title: 'Confirm Withdrawal',
+                text: `Are you sure you want to withdraw ${amt} USDT?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2196F3',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, Withdraw',
+                heightAuto: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const reqId = db.ref('admin_requests/withdrawals').push().key;
+                    const req = { 
+                        id: reqId,
+                        uid: currentUser.uid, 
+                        name: userData.name, 
+                        email: userData.email, 
+                        amount: amt, 
+                        method: method, 
+                        address: addr, 
+                        title: title, 
+                        status: 'pending', 
+                        date: Date.now() 
+                    };
+                    
+                    const updates = {};
+                    updates[`users/${currentUser.uid}/balance`] = userData.balance - amt;
+                    updates[`admin_requests/withdrawals/${reqId}`] = req;
+                    updates[`users/${currentUser.uid}/withdrawals/${reqId}`] = req;
 
-            const req = { 
-                id: reqId,
-                uid: currentUser.uid, 
-                name: userData.name, 
-                email: userData.email, 
-                amount: amt, 
-                method: method, 
-                address: addr, 
-                title: title, 
-                status: 'pending', 
-                date: Date.now() 
-            };
-            
-            const updates = {};
-            updates[`users/${currentUser.uid}/balance`] = userData.balance - amt;
-            // 1. Admin Request
-            updates[`admin_requests/withdrawals/${reqId}`] = req;
-            // 2. User History
-            updates[`users/${currentUser.uid}/withdrawals/${reqId}`] = req;
-
-            db.ref().update(updates).then(() => { 
-                Swal.fire({
-                    title: 'Success!',
-                    text: 'Withdrawal Requested.',
-                    icon: 'success',
-                    timer: 2000,
-                    showConfirmButton: false,
-                    heightAuto: false
-                }).then(() => {
-                    location.reload(); 
-                });
+                    db.ref().update(updates).then(() => { 
+                        Swal.fire({
+                            title: 'Success!',
+                            text: 'Withdrawal Requested.',
+                            icon: 'success',
+                            timer: 2000,
+                            showConfirmButton: false,
+                            heightAuto: false
+                        }).then(() => {
+                            location.reload(); 
+                        });
+                    });
+                }
             });
         }
 
@@ -1021,14 +1034,20 @@
         function login() {
             const e = document.getElementById('l-email').value;
             const p = document.getElementById('l-pass').value;
-            if(!e || !p) return Swal.fire('Error', 'Fill all fields', 'error');
+            if(!e || !p) return Swal.fire({title: 'Error', text: 'Fill all fields', icon: 'error', heightAuto: false});
             
-            if(!e.endsWith('.com')) {
-                return Swal.fire('Error', 'Invalid Email Format', 'error');
-            }
-
             document.getElementById('loader').classList.remove('hidden');
-            auth.signInWithEmailAndPassword(e, p).catch(err => { document.getElementById('loader').classList.add('hidden'); Swal.fire('Error', err.message, 'error'); });
+            auth.signInWithEmailAndPassword(e, p).catch(err => { 
+                document.getElementById('loader').classList.add('hidden'); 
+                // PROFESSIONAL ERROR ALERT
+                Swal.fire({
+                    title: 'Login Failed',
+                    text: 'Invalid Email or Password. Please try again.',
+                    icon: 'error',
+                    confirmButtonColor: '#2196F3',
+                    heightAuto: false
+                }); 
+            });
         }
         
         function register() {
@@ -1039,14 +1058,14 @@
             const urlParams = new URLSearchParams(window.location.search);
             const refCode = urlParams.get('ref') || ref;
 
-            if(!n || !e || !p) return Swal.fire('Error', 'Fill all fields', 'error');
+            if(!n || !e || !p) return Swal.fire({title: 'Error', text: 'Fill all fields', icon: 'error', heightAuto: false});
 
             if(!e.endsWith('.com')) {
-                return Swal.fire('Error', 'Invalid Email Format', 'error');
+                return Swal.fire({title: 'Error', text: 'Invalid Email Format', icon: 'error', heightAuto: false});
             }
 
             if(!/\d/.test(p)) {
-                return Swal.fire('Error', 'Password must contain at least one number', 'error');
+                return Swal.fire({title: 'Error', text: 'Password must contain at least one number', icon: 'error', heightAuto: false});
             }
 
             document.getElementById('loader').classList.remove('hidden'); 
@@ -1054,11 +1073,12 @@
             auth.createUserWithEmailAndPassword(e, p).then(cred => {
                 const uid = cred.user.uid;
                 const inviteCode = Math.floor(100000 + Math.random() * 900000);
+                // Ensure refCode is stored string to number consistency? Usually store string.
                 const userObj = { name: n, email: e, password: p, balance: 0, myInviteCode: inviteCode, invitedBy: refCode || "", joined: Date.now() };
                 db.ref('users/' + uid).set(userObj).then(() => Swal.fire('Success', 'Account Created', 'success'));
             }).catch(err => { 
                 document.getElementById('loader').classList.add('hidden'); 
-                Swal.fire('Error', err.message, 'error'); 
+                Swal.fire({title: 'Registration Failed', text: err.message, icon: 'error', confirmButtonColor: '#2196F3', heightAuto: false}); 
             });
         }
 
@@ -1106,7 +1126,7 @@
             });
         }
         
-        // --- UPDATED BUY PLAN FUNCTION WITH COMMISSION ---
+        // --- UPDATED BUY PLAN FUNCTION WITH COMMISSION & FASTEST UI ---
         function buyPlan(id) {
             const p = plans.find(x => x.id === id);
             
@@ -1123,8 +1143,11 @@
                 heightAuto: false 
             }).then((res) => {
                 if(res.isConfirmed) {
-                    // 2. Deduct Balance & Add Plan
+                    // OPTIMISTIC UPDATE: Update UI immediately
                     const newBal = userData.balance - p.price;
+                    document.getElementById('w-balance').innerText = newBal.toFixed(2);
+                    document.getElementById('u-balance').innerText = newBal.toFixed(8);
+
                     const purchase = { 
                         planId: p.id, 
                         name: p.name, 
@@ -1165,6 +1188,7 @@
                                 });
 
                                 // --- Level 2 Logic (Inside Level 1) ---
+                                // FIX: Use parseInt safely just in case
                                 const inviteCodeL2 = l1User.invitedBy;
                                 if(inviteCodeL2) {
                                     db.ref('users').orderByChild('myInviteCode').equalTo(parseInt(inviteCodeL2)).once('value', snap2 => {
@@ -1207,6 +1231,7 @@
 
                 // Process Level 1
                 for(let key in users) {
+                    // Loose equality for String vs Number match
                     if(users[key].invitedBy == myCode) {
                         let totalDep = 0;
                         if(users[key].activePlans) {
@@ -1215,7 +1240,7 @@
                         
                         users[key].totalDeposit = totalDep;
                         teamDataL1.push(users[key]); 
-                        l1Codes.push(users[key].myInviteCode);
+                        l1Codes.push(users[key].myInviteCode); // Pushing Numbers
                         
                         if(totalDep >= 10) {
                             activeL1Count++;
@@ -1224,9 +1249,12 @@
                     }
                 }
 
-                // Process Level 2
+                // Process Level 2 - FIX APPLIED HERE
                 for(let key in users) { 
-                    if(l1Codes.includes(users[key].invitedBy)) {
+                    // users[key].invitedBy is likely String from input
+                    // l1Codes are Numbers
+                    // ParseInt ensures accurate matching for Level 2
+                    if(l1Codes.includes(parseInt(users[key].invitedBy))) {
                         let totalDep = 0;
                         if(users[key].activePlans) {
                             Object.values(users[key].activePlans).forEach(p => totalDep += p.price);
@@ -1327,7 +1355,7 @@
             if(containers.length === 0) return;
             const updateUI = (content) => { containers.forEach(c => c.innerHTML = content); };
             if (remainingMs <= 0) {
-                updateUI(`<button class="btn btn-primary" style="margin-top:10px; background:var(--balance-green);" onclick="claimProfit('${key}')">CLAIM PROFIT (${usdtIcon}${plan.daily})</button>`);
+                updateUI(`<button id="btn-claim-${key}" class="btn btn-primary" style="margin-top:10px; background:var(--balance-green);" onclick="claimProfit('${key}', ${plan.daily}, '${plan.totalDays}', ${plan.daysPassed})">CLAIM PROFIT (${usdtIcon}${plan.daily})</button>`);
                 return;
             }
             const update = () => {
@@ -1339,17 +1367,20 @@
             update(); const interval = setInterval(update, 1000);
         }
 
-        function claimProfit(key) {
+        // FAST CLAIM FUNCTION
+        function claimProfit(key, dailyAmt, totalDays, currentDays) {
+            // Disable button immediately to prevent double clicks
+            const btn = document.getElementById(`btn-claim-${key}`);
+            if(btn) { btn.disabled = true; btn.innerText = "Claiming..."; }
+
             const planRef = db.ref(`users/${currentUser.uid}/activePlans/${key}`);
-            planRef.once('value', snap => {
-                const p = snap.val();
-                const newDays = p.daysPassed + 1;
-                let updates = { lastClaim: Date.now(), daysPassed: newDays };
-                if(newDays >= p.totalDays) updates.status = 'completed';
-                planRef.update(updates).then(() => {
-                    db.ref(`users/${currentUser.uid}/balance`).set(parseFloat(userData.balance) + parseFloat(p.daily));
-                    Swal.fire({ title: 'Collected!', icon: 'success', timer: 1500, showConfirmButton: false, heightAuto: false });
-                });
+            const newDays = parseInt(currentDays) + 1;
+            let updates = { lastClaim: Date.now(), daysPassed: newDays };
+            if(newDays >= parseInt(totalDays)) updates.status = 'completed';
+            
+            planRef.update(updates).then(() => {
+                db.ref(`users/${currentUser.uid}/balance`).set(parseFloat(userData.balance) + parseFloat(dailyAmt));
+                Swal.fire({ title: 'Collected!', icon: 'success', timer: 1500, showConfirmButton: false, heightAuto: false });
             });
         }
 
