@@ -1,4 +1,4 @@
-<!-- START OF FILE ai_studio_code (Updated with Commission Section) -->
+<!-- START OF FILE ai_studio_code (Fixed Commission Logic) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -193,9 +193,9 @@
             background: rgba(255,255,255,0.95); backdrop-filter: blur(12px);
             display: flex; justify-content: space-around; align-items: center; 
             padding-bottom: 15px; 
-            z-index: 20000; /* Fixed: High z-index to stay visible over popups */
+            z-index: 20000;
             box-shadow: 0 -10px 30px rgba(0,0,0,0.05);
-            transform: translateZ(0); /* Fixed: GPU Acceleration to prevent flicker */
+            transform: translateZ(0); 
         }
         .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: #b0bec5; font-size: 10px; cursor: pointer; transition: 0.3s; }
         .nav-item i { font-size: 22px; margin-bottom: 2px; }
@@ -1105,15 +1105,93 @@
                 </div>`;
             });
         }
+        
+        // --- UPDATED BUY PLAN FUNCTION WITH COMMISSION ---
         function buyPlan(id) {
             const p = plans.find(x => x.id === id);
-            if(userData.balance < p.price) return Swal.fire({title: 'Error', text: 'Insufficient Balance', icon: 'error', heightAuto: false});
-            Swal.fire({ title: 'Confirm', text: `Invest ${p.price} USDT in ${p.name}?`, showCancelButton: true, confirmButtonText: 'Yes', heightAuto: false }).then((res) => {
+            
+            // 1. Check Balance
+            if(userData.balance < p.price) {
+                return Swal.fire({title: 'Error', text: 'Insufficient Balance', icon: 'error', heightAuto: false});
+            }
+
+            Swal.fire({ 
+                title: 'Confirm', 
+                text: `Invest ${p.price} USDT in ${p.name}?`, 
+                showCancelButton: true, 
+                confirmButtonText: 'Yes', 
+                heightAuto: false 
+            }).then((res) => {
                 if(res.isConfirmed) {
+                    // 2. Deduct Balance & Add Plan
                     const newBal = userData.balance - p.price;
-                    const purchase = { planId: p.id, name: p.name, price: p.price, daily: p.daily, totalDays: p.days, daysPassed: 0, lastClaim: 0, startTime: Date.now(), status: 'active' };
+                    const purchase = { 
+                        planId: p.id, 
+                        name: p.name, 
+                        price: p.price, 
+                        daily: p.daily, 
+                        totalDays: p.days, 
+                        daysPassed: 0, 
+                        lastClaim: 0, 
+                        startTime: Date.now(), 
+                        status: 'active' 
+                    };
+
                     db.ref('users/' + currentUser.uid + '/balance').set(newBal);
                     db.ref('users/' + currentUser.uid + '/activePlans').push(purchase);
+
+                    // 3. Process Commissions (Level 1 & Level 2)
+                    const inviteCodeL1 = userData.invitedBy; 
+
+                    if(inviteCodeL1) {
+                        // Find Level 1 Inviter
+                        db.ref('users').orderByChild('myInviteCode').equalTo(parseInt(inviteCodeL1)).once('value', snapshot => {
+                            if(snapshot.exists()) {
+                                const l1Node = snapshot.val();
+                                const l1Uid = Object.keys(l1Node)[0];
+                                const l1User = l1Node[l1Uid];
+
+                                // L1 Calculation (10%)
+                                const commL1 = p.price * 0.10;
+                                const newL1Bal = (parseFloat(l1User.balance) || 0) + commL1;
+                                
+                                // Update L1
+                                db.ref(`users/${l1Uid}/balance`).set(newL1Bal);
+                                db.ref(`users/${l1Uid}/commissions`).push({
+                                    amount: commL1,
+                                    type: 'Level 1 Commission',
+                                    fromUser: userData.name,
+                                    date: Date.now()
+                                });
+
+                                // --- Level 2 Logic (Inside Level 1) ---
+                                const inviteCodeL2 = l1User.invitedBy;
+                                if(inviteCodeL2) {
+                                    db.ref('users').orderByChild('myInviteCode').equalTo(parseInt(inviteCodeL2)).once('value', snap2 => {
+                                        if(snap2.exists()) {
+                                            const l2Node = snap2.val();
+                                            const l2Uid = Object.keys(l2Node)[0];
+                                            const l2User = l2Node[l2Uid];
+
+                                            // L2 Calculation (5%)
+                                            const commL2 = p.price * 0.05;
+                                            const newL2Bal = (parseFloat(l2User.balance) || 0) + commL2;
+
+                                            // Update L2
+                                            db.ref(`users/${l2Uid}/balance`).set(newL2Bal);
+                                            db.ref(`users/${l2Uid}/commissions`).push({
+                                                amount: commL2,
+                                                type: 'Level 2 Commission',
+                                                fromUser: userData.name + ' (L2)',
+                                                date: Date.now()
+                                            });
+                                        }
+                                    });
+                                }
+                            }
+                        });
+                    }
+
                     Swal.fire({title: 'Success', text: 'Plan Activated', icon: 'success', heightAuto: false});
                     nav('active');
                 }
